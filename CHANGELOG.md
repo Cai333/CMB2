@@ -24,6 +24,8 @@ All notable changes to this project will be documented in this file.
 
 	Props [@norcross](https://github.com/norcross) ([#836](https://github.com/WebDevStudios/CMB2/pull/836)).
 * New field parameter, `'render_class'`, allowing you to override the default `'CMB2_Type_Base'` class that is used when rendering the field. This provides interesting object-oriented ways to override default CMB2 behavior by subclassing the default class and overriding methods. The render class can also be overridden with the `"cmb2_render_class_{$fieldtype}"` filter, which is passed the default render class name as well as the `CMB2_Types` object, but this should be used sparingly, and within the context of your project's boxes/fields or you could break other plugins/themes CMB2 fields.
+* Improvements to the `file`/`file_list` fields javascript APIs, including using undersore templates. 
+* New action hook, `cmb2_footer_enqueue`, which occurs after CMB2 enqueues its assets.
 
 ### Bug Fixes
 * Fix datepicker month/year dropdown text color. On windows, the option text was showing as white (invisible). Fixes [#770](https://github.com/WebDevStudios/CMB2/issues/770).
@@ -34,6 +36,7 @@ All notable changes to this project will be documented in this file.
 * Fix WordPress spinner styling when boxes/fields used on the frontend.
 * Fix issue where clicking to remove a `file_list` item could occasionally remove the field row. ([#828](https://github.com/WebDevStudios/CMB2/pull/828)).
 * Fix issue where empty file field in group would still cause non-empty values to store to database. ([#721](https://github.com/WebDevStudios/CMB2/issues/721)).
+* Make `file`/`file_list` field preview images work with named sizes. Props [@Cai333](https://github.com/Cai333) ([#848](https://github.com/WebDevStudios/CMB2/pull/848), [#844](https://github.com/WebDevStudios/CMB2/issues/844)).
 
 ## 2.2.3.1 - 2016-11-08
 

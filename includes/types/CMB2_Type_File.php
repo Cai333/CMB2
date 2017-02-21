@@ -13,17 +13,15 @@
 class CMB2_Type_File extends CMB2_Type_File_Base {
 
 	public function render() {
+		$field      = $this->field;
+		$meta_value = $field->escaped_value();
+		$options    = (array) $field->options();
+		$img_size   = $field->args( 'preview_size' );
+		$query_args = $field->args( 'query_args' );
+		$output     = '';
 
-		$field       = $this->field;
-		$meta_value  = $field->escaped_value();
-		$options     = (array) $field->options();
-		$img_size    = $field->args( 'preview_size' );
-		$query_args  = $field->args( 'query_args' );
-		$output      = '';
-
-		// get an array of image size meta data
-		// fallback to 'large'
-		$img_size_data = $this->get_image_size_data( $img_size, 'large' );
+		// get an array of image size meta data, fallback to 'large'
+		$img_size_data = parent::get_image_size_data( $img_size, 'large' );
 
 		// if options array and 'url' => false, then hide the url field
 		$input_type = array_key_exists( 'url', $options ) && false === $options['url'] ? 'hidden' : 'text';
@@ -82,7 +80,7 @@ class CMB2_Type_File extends CMB2_Type_File_Base {
 				if ( $_id_value ) {
 					$image = wp_get_attachment_image( $_id_value, $img_size, null, array( 'class' => 'cmb-file-field-image' ) );
 				} else {
-					$image = '<img src="' . $meta_value . '" class="cmb-file-field-image" alt="" />';
+					$image = '<img style="max-width: ' . absint( $img_size_data['width'] ) . 'px; width: 100%;" src="' . $meta_value . '" class="cmb-file-field-image" alt="" />';
 				}
 
 				$output .= $this->img_status_output( array(

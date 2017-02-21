@@ -48,16 +48,85 @@ class CMB2_Type_File_Base extends CMB2_Type_Text {
 	}
 
 	/**
+	 * file/file_list image wrap
+	 * @since  2.0.2
+	 * @param  array  $args Array of arguments for output
+	 * @return string       Image wrap output
+	 */
+	public function img_status_output( $args ) {
+		return sprintf( '<%1$s class="img-status cmb2-media-item">%2$s<p class="cmb2-remove-wrapper"><a href="#" class="cmb2-remove-file-button"%3$s>%4$s</a></p>%5$s</%1$s>',
+			$args['tag'],
+			$args['image'],
+			isset( $args['cached_id'] ) ? ' rel="' . $args['cached_id'] . '"' : '',
+			esc_html( $this->_text( 'remove_image_text', esc_html__( 'Remove Image', 'cmb2' ) ) ),
+			isset( $args['id_input'] ) ? $args['id_input'] : ''
+		);
+	}
+
+	/**
+	 * file/file_list file wrap
+	 * @since  2.0.2
+	 * @param  array  $args Array of arguments for output
+	 * @return string       File wrap output
+	 */
+	public function file_status_output( $args ) {
+		return sprintf( '<%1$s class="file-status cmb2-media-item"><span>%2$s <strong>%3$s</strong></span>&nbsp;&nbsp; (<a href="%4$s" target="_blank" rel="external">%5$s</a> / <a href="#" class="cmb2-remove-file-button"%6$s>%7$s</a>)%8$s</%1$s>',
+			$args['tag'],
+			esc_html( $this->_text( 'file_text', esc_html__( 'File:', 'cmb2' ) ) ),
+			CMB2_Utils::get_file_name_from_path( $args['value'] ),
+			$args['value'],
+			esc_html( $this->_text( 'file_download_text', esc_html__( 'Download', 'cmb2' ) ) ),
+			isset( $args['cached_id'] ) ? ' rel="' . $args['cached_id'] . '"' : '',
+			esc_html( $this->_text( 'remove_text', esc_html__( 'Remove', 'cmb2' ) ) ),
+			isset( $args['id_input'] ) ? $args['id_input'] : ''
+		);
+	}
+
+	/**
+	 * Outputs the file/file_list underscore Javascript templates in the footer.
+	 * @since  2.2.4
+	 * @return void
+	 */
+	public static function output_js_underscore_templates() {
+		?>
+		<script type="text/html" id="tmpl-cmb2-single-image">
+			<div class="img-status cmb2-media-item">
+				<img width="{{ data.sizeWidth }}" height="{{ data.sizeHeight }}" src="{{ data.sizeUrl }}" class="cmb-file-field-image" alt="{{ data.filename }}" title="{{ data.filename }}" />
+				<p><a href="#" class="cmb2-remove-file-button" rel="{{ data.mediaField }}">{{ data.stringRemoveImage }}</a></p>
+			</div>
+		</script>
+		<script type="text/html" id="tmpl-cmb2-single-file">
+			<div class="file-status cmb2-media-item">
+				<span>{{ data.stringFile }} <strong>{{ data.filename }}</strong></span>&nbsp;&nbsp; (<a href="{{ data.url }}" target="_blank" rel="external">{{ data.stringDownload }}</a> / <a href="#" class="cmb2-remove-file-button" rel="{{ data.mediaField }}">{{ data.stringRemoveFile }}</a>)
+			</div>
+		</script>
+		<script type="text/html" id="tmpl-cmb2-list-image">
+			<li class="img-status cmb2-media-item">
+				<img width="{{ data.sizeWidth }}" height="{{ data.sizeHeight }}" src="{{ data.sizeUrl }}" class="cmb-file_list-field-image" alt="{{ data.filename }}">
+				<p><a href="#" class="cmb2-remove-file-button" rel="{{ data.mediaField }}[{{ data.id }}]">{{ data.stringRemoveImage }}</a></p>
+				<input type="hidden" id="filelist-{{ data.id }}" data-id="{{ data.id }}" name="{{ data.mediaFieldName }}[{{ data.id }}]" value="{{ data.url }}">
+			</li>
+		</script>
+		<script type="text/html" id="tmpl-cmb2-list-file">
+			<li class="file-status cmb2-media-item">
+				<span>{{ data.stringFile }} <strong>{{ data.filename }}</strong></span>&nbsp;&nbsp; (<a href="{{ data.url }}" target="_blank" rel="external">{{ data.stringDownload }}</a> / <a href="#" class="cmb2-remove-file-button" rel="{{ data.mediaField }}[{{ data.id }}]">{{ data.stringRemoveFile }}</a>)
+				<input type="hidden" id="filelist-{{ data.id }}" data-id="{{ data.id }}" name="{{ data.mediaFieldName }}[{{ data.id }}]" value="{{ data.url }}">
+			</li>
+		</script>
+		<?php
+	}
+
+	/**
 	 * Utility method to return an array of meta data for a registered image size
 	 *
 	 * Uses CMB2_Utils::get_named_size() to get the closest available named size
 	 * from an array of width and height values and CMB2_Utils::get_available_image_sizes()
 	 * to get the meta data associated with a named size.
 	 *
-	 * @since  2.x.x.x
+	 * @since  2.2.4
 	 * @param  array|string $img_size  Image size. Accepts an array of width and height (in that order)
 	 * @param  string       $fallback  Size to use if the supplied named size doesn't exist
-	 * @return array        $size      Array containing the image size meta data
+	 * @return array                   Array containing the image size meta data
 	 *    $size = (
 	 *      'width'  => (int) image size width
 	 *      'height' => (int) image size height
@@ -95,7 +164,7 @@ class CMB2_Type_File_Base extends CMB2_Type_Text {
 			$data['height'] = intval( $image_sizes[ $img_size ]['height'] );
 			$data['name']   = $img_size;
 		}
-		
+
 		return $data;
 	}
 
@@ -105,17 +174,15 @@ class CMB2_Type_File_Base extends CMB2_Type_Text {
 	 * Adds the url, width, height, and orientation for custom sizes to the JavaScript
 	 * object returned by the wp.media uploader. Hooked to 'wp_prepare_attachment_for_js'.
 	 *
-	 * @since  2.x.x.x
+	 * @since  2.2.4
 	 * @param  array      $response   Array of prepared attachment data
 	 * @param  int|object $attachment Attachment ID or object
 	 * @param  array      $meta       Array of attachment meta data ( from wp_get_attachment_metadata() )
-	 * @return string     filtered $response array
+	 * @return array      filtered $response array
 	 */
 	public static function prepare_image_sizes_for_js( $response, $attachment, $meta ) {
-		$image_sizes = CMB2_Utils::get_available_image_sizes();
-		$image_sizes = array_keys( $image_sizes );
-		
-		foreach ( $image_sizes as $size ) {
+		foreach ( CMB2_Utils::get_available_image_sizes() as $size => $info ) {
+
 			// registered image size exists for this attachment
 			if ( isset( $meta['sizes'][ $size ] ) ) {
 
@@ -133,41 +200,6 @@ class CMB2_Type_File_Base extends CMB2_Type_Text {
 		}
 
 		return $response;
-	}
-
-	/**
-	 * file/file_list image wrap
-	 * @since  2.0.2
-	 * @param  array  $args Array of arguments for output
-	 * @return string       Image wrap output
-	 */
-	public function img_status_output( $args ) {
-		return sprintf( '<%1$s class="img-status cmb2-media-item">%2$s<p class="cmb2-remove-wrapper"><a href="#" class="cmb2-remove-file-button"%3$s>%4$s</a></p>%5$s</%1$s>',
-			$args['tag'],
-			$args['image'],
-			isset( $args['cached_id'] ) ? ' rel="' . $args['cached_id'] . '"' : '',
-			esc_html( $this->_text( 'remove_image_text', esc_html__( 'Remove Image', 'cmb2' ) ) ),
-			isset( $args['id_input'] ) ? $args['id_input'] : ''
-		);
-	}
-
-	/**
-	 * file/file_list file wrap
-	 * @since  2.0.2
-	 * @param  array  $args Array of arguments for output
-	 * @return string       File wrap output
-	 */
-	public function file_status_output( $args ) {
-		return sprintf( '<%1$s class="file-status cmb2-media-item"><span>%2$s <strong>%3$s</strong></span>&nbsp;&nbsp; (<a href="%4$s" target="_blank" rel="external">%5$s</a> / <a href="#" class="cmb2-remove-file-button"%6$s>%7$s</a>)%8$s</%1$s>',
-			$args['tag'],
-			esc_html( $this->_text( 'file_text', esc_html__( 'File:', 'cmb2' ) ) ),
-			CMB2_Utils::get_file_name_from_path( $args['value'] ),
-			$args['value'],
-			esc_html( $this->_text( 'file_download_text', esc_html__( 'Download', 'cmb2' ) ) ),
-			isset( $args['cached_id'] ) ? ' rel="' . $args['cached_id'] . '"' : '',
-			esc_html( $this->_text( 'remove_text', esc_html__( 'Remove', 'cmb2' ) ) ),
-			isset( $args['id_input'] ) ? $args['id_input'] : ''
-		);
 	}
 
 }

@@ -179,7 +179,10 @@ window.CMB2 = window.CMB2 || {};
 			return;
 		}
 
-		var media         = cmb.media;
+		var modal, media, handlers;
+
+		handlers          = cmb.mediaHandlers;
+		media             = cmb.media;
 		media.field       = formfield;
 		media.$field      = $id( media.field );
 		media.fieldData   = media.$field.data();
@@ -188,16 +191,13 @@ window.CMB2 = window.CMB2 || {};
 		media.fieldName   = media.$field.attr('name');
 		media.isList      = isList;
 
-		var uploadStatus, attachment;
-
 		// If this field's media frame already exists, reopen it.
 		if ( media.field in media.frames ) {
-			media.frames[ media.field ].open();
-			return;
+			return media.frames[ media.field ].open();
 		}
 
 		// Create the media frame.
-		media.frames[ media.field ] = wp.media( {
+		media.frames[ media.field ] = modal = wp.media( {
 			title: cmb.metabox().find('label[for="' + media.field + '"]').text(),
 			library : media.fieldData.queryargs || {},
 			button: {
@@ -208,130 +208,142 @@ window.CMB2 = window.CMB2 || {};
 
 		cmb.trigger( 'cmb_media_modal_init', media );
 
-		cmb.mediaHandlers.list = function( selection, returnIt ) {
-			// Get all of our selected files
-			attachment = selection.toJSON();
-
-			media.$field.val(attachment.url);
-			$id( media.field +'_id' ).val(attachment.id);
+		handlers.list = function( selection, returnIt ) {
+			var data, isImage, mediaItem;
 
 			// Setup our fileGroup array
 			var fileGroup = [];
 
+			if ( ! handlers.list.templates ) {
+				handlers.list.templates = {
+					image : wp.template( 'cmb2-list-image' ),
+					file  : wp.template( 'cmb2-list-file' ),
+				};
+			}
+
 			// Loop through each attachment
-			$( attachment ).each( function() {
-				if ( this.type && this.type === 'image' ) {
+			selection.each( function( attachment ) {
+				isImage = 'image' === attachment.get( 'type' );
 
-					// Get the correct image size data
-					var sizeData = cmb.mediaHandlers.getImageData( this, media.previewSize, media.sizeName, 50 );
+				data = handlers.prepareData( attachment, isImage );
 
-					// Image preview
-					uploadStatus = '<li class="img-status cmb2-media-item">'+
-						'<img width="'+ sizeData.width +'" height="'+ sizeData.height +'" src="'+ sizeData.url +'" class="cmb-file_list-field-image" alt="'+ this.filename +'">'+
-						'<p><a href="#" class="cmb2-remove-file-button" rel="'+ media.field +'['+ this.id +']">'+ l10n.strings.remove_image +'</a></p>'+
-						'<input type="hidden" id="filelist-'+ this.id +'" data-id="'+ this.id +'" name="'+ media.fieldName +'['+ this.id +']" value="' + this.url + '">'+
-					'</li>';
-
-				} else {
-					// Standard generic output if it's not an image.
-					uploadStatus = '<li class="file-status cmb2-media-item"><span>'+ l10n.strings.file +' <strong>'+ this.filename +'</strong></span>&nbsp;&nbsp; (<a href="' + this.url + '" target="_blank" rel="external">'+ l10n.strings.download +'</a> / <a href="#" class="cmb2-remove-file-button" rel="'+ media.field +'['+ this.id +']">'+ l10n.strings.remove_file +'</a>)'+
-						'<input type="hidden" id="filelist-'+ this.id +'" data-id="'+ this.id +'" name="'+ media.fieldName +'['+ this.id +']" value="' + this.url + '">'+
-					'</li>';
-
-				}
+				// Image preview or standard generic output if it's not an image.
+				mediaItem = handlers.list.templates[ isImage ? 'image' : 'file' ]( data );
 
 				// Add our file to our fileGroup array
-				fileGroup.push( uploadStatus );
+				fileGroup.push( mediaItem );
 			});
 
 			if ( ! returnIt ) {
 				// Append each item from our fileGroup array to .cmb2-media-status
-				$( fileGroup ).each( function() {
-					media.$field.siblings('.cmb2-media-status').slideDown().append(this);
-				});
+				media.$field.siblings( '.cmb2-media-status' ).append( fileGroup );
 			} else {
 				return fileGroup;
 			}
 
 		};
 
-		cmb.mediaHandlers.single = function( selection ) {
-			// Only get one file from the uploader
-			attachment = selection.first().toJSON();
+		handlers.single = function( selection ) {
+			var attachment, isImage, data, mediaItem;
 
-			media.$field.val(attachment.url);
-			$id( media.field +'_id' ).val(attachment.id);
-
-			if ( attachment.type && attachment.type === 'image' ) {
-
-				// Get the correct image size data
-				var sizeData = cmb.mediaHandlers.getImageData( attachment, media.previewSize, media.sizeName, 350 );
-
-				// Image preview
-				uploadStatus = '<div class="img-status cmb2-media-item"><img width="'+ sizeData.width +'" height="'+ sizeData.height +'" src="'+ sizeData.url +'" class="cmb-file-field-image" alt="'+ attachment.filename +'" title="'+ attachment.filename +'" /><p><a href="#" class="cmb2-remove-file-button" rel="' + media.field + '">'+ l10n.strings.remove_image +'</a></p></div>';
-			} else {
-				// Standard generic output if it's not an image.
-				uploadStatus = '<div class="file-status cmb2-media-item"><span>'+ l10n.strings.file +' <strong>'+ attachment.filename +'</strong></span>&nbsp;&nbsp; (<a href="'+ attachment.url +'" target="_blank" rel="external">'+ l10n.strings.download +'</a> / <a href="#" class="cmb2-remove-file-button" rel="'+ media.field +'">'+ l10n.strings.remove_file +'</a>)</div>';
+			if ( ! handlers.single.templates ) {
+				handlers.single.templates = {
+					image : wp.template( 'cmb2-single-image' ),
+					file  : wp.template( 'cmb2-single-file' ),
+				};
 			}
 
+			// Only get one file from the uploader
+			attachment = selection.first();
+
+			media.$field.val( attachment.get( 'url' ) );
+			$id( media.field +'_id' ).val( attachment.get( 'id' ) );
+
+			isImage = 'image' === attachment.get( 'type' );
+
+			data = handlers.prepareData( attachment, isImage );
+
+			// Image preview or standard generic output if it's not an image.
+			mediaItem = handlers.single.templates[ isImage ? 'image' : 'file' ]( data );
+
 			// add/display our output
-			media.$field.siblings('.cmb2-media-status').slideDown().html(uploadStatus);
+			media.$field.siblings( '.cmb2-media-status' ).slideDown().html( mediaItem );
 		};
 
-		cmb.mediaHandlers.getImageData = function( attachment, previewSize, sizeName, fallbackSize ) {
+		handlers.prepareData = function( data, image ) {
+			if ( image ) {
+				// Set the correct image size data
+				handlers.getImageData.call( data, 50 );
+			}
+
+			data                   = data.toJSON();
+			data.mediaField        = media.field;
+			data.mediaFieldName    = media.fieldName;
+			data.stringRemoveImage = l10n.strings.remove_image;
+			data.stringFile        = l10n.strings.file;
+			data.stringDownload    = l10n.strings.download;
+			data.stringRemoveFile  = l10n.strings.remove_file;
+
+			return data;
+		};
+
+		handlers.getImageData = function( fallbackSize ) {
+
 			// Preview size dimensions
-			var previewWidth  = previewSize[0] ? previewSize[0] : fallbackSize;
-			var previewHeight = previewSize[1] ? previewSize[1] : fallbackSize;
+			var previewW = media.previewSize[0] || fallbackSize;
+			var previewH = media.previewSize[1] || fallbackSize;
 
 			// Image dimensions and url
-			var url    = attachment.url;
-			var width  = attachment.width;
-			var height = attachment.height;
+			var url    = this.get( 'url' );
+			var width  = this.get( 'width' );
+			var height = this.get( 'height' );
+			var sizes  = this.get( 'sizes' );
 
 			// Get the correct dimensions and url if a named size is set and exists
 			// fallback to the 'large' size
-			if ( 'undefined' !== typeof( attachment.sizes[ sizeName ] ) ) {
-				url    = attachment.sizes[ sizeName ].url;
-				width  = attachment.sizes[ sizeName ].width;
-				height = attachment.sizes[ sizeName ].height;
-			} else if ( 'undefined' !== typeof( attachment.sizes['large'] ) ) {
-				url    = attachment.sizes['large'].url;
-				width  = attachment.sizes['large'].width;
-				height = attachment.sizes['large'].height;
+			if ( sizes[ media.sizeName ] ) {
+				url    = sizes[ media.sizeName ].url;
+				width  = sizes[ media.sizeName ].width;
+				height = sizes[ media.sizeName ].height;
+			} else if ( sizes.large ) {
+				url    = sizes.large.url;
+				width  = sizes.large.width;
+				height = sizes.large.height;
 			}
 
 			// Fit the image in to the preview size, keeping the correct aspect ratio
-			if( width > previewWidth ) {
-				height = Math.floor( previewWidth * height / width );
-				width = previewWidth
-			}
-			if( height > previewHeight ) {
-				width = Math.floor( previewHeight * width / height );
-				height = previewHeight;
+			if ( width > previewW ) {
+				height = Math.floor( previewW * height / width );
+				width = previewW;
 			}
 
-			return {
-				"url": url,
-				"width": width,
-				"height": height
+			if ( height > previewH ) {
+				width = Math.floor( previewH * width / height );
+				height = previewH;
 			}
+
+			this.set( 'sizeUrl', url );
+			this.set( 'sizeWidth', width );
+			this.set( 'sizeHeight', height );
+
+			return this;
 		};
 
-		cmb.mediaHandlers.selectFile = function() {
-			var selection = media.frames[ media.field ].state().get('selection');
+		handlers.selectFile = function() {
+			var selection = modal.state().get( 'selection' );
 			var type = isList ? 'list' : 'single';
 
 			if ( cmb.attach_id && isList ) {
-				$( '[data-id="'+ cmb.attach_id +'"]' ).parents( 'li' ).replaceWith( cmb.mediaHandlers.list( selection, true ) );
+				$( '[data-id="'+ cmb.attach_id +'"]' ).parents( 'li' ).replaceWith( handlers.list( selection, true ) );
 			} else {
-				cmb.mediaHandlers[type]( selection );
+				handlers[type]( selection );
 			}
 
 			cmb.trigger( 'cmb_media_modal_select', selection, media );
 		};
 
-		cmb.mediaHandlers.openModal = function() {
-			var selection = media.frames[ media.field ].state().get('selection');
+		handlers.openModal = function() {
+			var selection = modal.state().get( 'selection' );
 			var attach;
 
 			if ( ! cmb.attach_id ) {
@@ -346,12 +358,12 @@ window.CMB2 = window.CMB2 || {};
 		};
 
 		// When a file is selected, run a callback.
-		media.frames[ media.field ]
-			.on( 'select', cmb.mediaHandlers.selectFile )
-			.on( 'open', cmb.mediaHandlers.openModal );
+		modal
+			.on( 'select', handlers.selectFile )
+			.on( 'open', handlers.openModal );
 
 		// Finally, open the modal
-		media.frames[ media.field ].open();
+		modal.open();
 	};
 
 	cmb.handleRemoveMedia = function( evt ) {
